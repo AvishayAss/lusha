@@ -1,0 +1,118 @@
+service:
+  name: lusha-assignment
+
+custom:
+  stages:
+    - local
+    - dev
+    - prod
+  scrapingTable:
+    local: local-scraping
+    dev: dev-scraping
+    prod: prod-scraping
+  dynamoDbResource:
+    local: "localhost:8000"
+    dev: "arn:aws:dynamodb:us-east-1:*:table/${self:provider.environment.DYNAMODB_SCRAPING_TABLE}"
+    prod: "arn:aws:dynamodb:us-east-1:*:table/${self:provider.environment.DYNAMODB_SCRAPING_TABLE}"
+
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules: true
+
+  dynamodb:
+    # If you only want to use DynamoDB Local in some stages, declare them here
+    stages:
+      - local
+    start:
+      port: 8000
+      inMemory: true
+      heapInitial: 200m
+      heapMax: 1g
+      migrate: true
+      seed: false
+      convertEmptyValues: true
+
+plugins:
+  # Webpack support
+  - serverless-webpack
+  # DynamoDB locally for testing
+  - serverless-dynamodb-local
+  # Run serverless locally
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  apiGateway:
+    minimumCompressionSize: 1024
+
+  environment:
+    CURRENT_ENV: ${self:provider.stage}
+    DYNAMODB_SCRAPING_TABLE: ${self:custom.scrapingTable.${self:provider.stage}}
+    PARSING_SECONDARY_KEY_VALUE: DATA
+    PARTITION_KEY_NAME: PK
+    SECONDARY_KEY_NAME: SK
+    ACCOUNT_ID: <YOUR_AWS_ACCOUNT_ID>
+    PARSING_QUEUE_NAME: ParsingQueue
+    QUEUE_BATCH_SIZE: 1
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:BatchWriteItem
+        - sqs:SendMessage
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_SCRAPING_TABLE}
+        - arn:aws:sqs:${self:provider.region}:*:${self:provider.environment.PARSING_QUEUE_NAME}
+
+
+functions:
+  # Parsing
+  parseUrl:
+    handler: ./end-points/parsing/hendlers/post-handler.handleParseUrl
+    events:
+      - http:
+          method: POST
+          path: parse
+
+  handleQueueMessages:
+    handler: ./end-points/parsing/hendlers/sqs-handler.handleParsingQueueMessages
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - ${self:provider.environment.PARSING_QUEUE_NAME}
+              - Arn
+          batchSize: ${self:provider.environment.QUEUE_BATCH_SIZE}
+
+resources: # CloudFormation template syntax from here on.
+  Resources:
+    ParsingQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.PARSING_QUEUE_NAME}
+
+    scrapingTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_SCRAPING_TABLE}
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          # The table Primary Key
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+
+
+  
+

@@ -1,0 +1,41 @@
+{
+  "name": "lush-assignmet",
+  "version": "1.0.0",
+  "description": "Serverless webpack example using Typescript",
+  "main": "handler.js",
+  "scripts": {
+    "deploy-dev": "sls deploy --stage dev",
+    "deploy-prod": "sls deploy --stage prod",
+    "dynamodb-local": "sls dynamodb start",
+    "install-dynamodb-local": "sls dynamodb install",
+    "remove-dynamo-local": "sls dynamodb remove",
+    "serverless-offline-dev": "sls offline start -s dev",
+    "test": "jest",
+    "test-watch": "jest -- watch"
+  },
+  "dependencies": {
+    "serverless-dynamodb-client": "0.0.2",
+    "source-map-support": "^0.5.10"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.17",
+    "@types/jest": "^26.0.14",
+    "@types/node": "^10.12.18",
+    "@types/serverless": "^1.72.5",
+    "aws-sdk": "^2.771.0",
+    "chai": "^4.2.0",
+    "fork-ts-checker-webpack-plugin": "^3.0.1",
+    "jest": "^26.5.3",
+    "serverless-dynamodb-local": "^0.2.30",
+    "serverless-offline": "^6.8.0",
+    "serverless-webpack": "^5.2.0",
+    "ts-jest": "^26.4.1",
+    "ts-loader": "^5.3.3",
+    "ts-node": "^8.10.2",
+    "typescript": "^4.0.3",
+    "webpack": "^4.29.0",
+    "webpack-node-externals": "^1.7.2"
+  },
+  "author": "The serverless webpack authors (https://github.com/elastic-coders/serverless-webpack)",
+  "license": "MIT"
+}
